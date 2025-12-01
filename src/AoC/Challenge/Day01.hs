@@ -5,6 +5,7 @@
 
 module AoC.Challenge.Day01 (
   day01a,
+  day01b,
 )
 where
 
@@ -13,6 +14,7 @@ where
 import AoC.Solution
 import Control.Applicative ((<|>))
 import Data.Bifunctor (first)
+import Data.Foldable (foldl')
 import Data.List (scanl')
 import Data.Void (Void)
 import qualified Text.Megaparsec as MP
@@ -37,8 +39,27 @@ day01a =
   Solution
     { sParse = parse
     , sShow = show
-    , sSolve = Right . length . filter (== 0) . scanl' (\x y -> (x + y) `mod` 100) 50
+    , sSolve =
+        Right
+          . length
+          . filter (== 0)
+          . scanl' (\x y -> (x + y) `mod` 100) 50
     }
 
-day01b :: Solution _ _
-day01b = Solution{sParse = Right, sShow = show, sSolve = Right}
+solveB :: [Int] -> Int
+solveB = fst . foldl' go (0, 50)
+ where
+  go :: (Int, Int) -> Int -> (Int, Int)
+  go (tot, curr) move = (tot', curr')
+   where
+    (d, curr') = (curr + move) `divMod` 100
+    hits
+      | move > 0 = d
+      | curr' == 0 && curr == 0 = abs d
+      | curr' == 0 = abs d + 1
+      | curr == 0 = abs d - 1
+      | otherwise = abs d
+    tot' = tot + hits
+
+day01b :: Solution [Int] Int
+day01b = Solution{sParse = parse, sShow = show, sSolve = Right . solveB}
