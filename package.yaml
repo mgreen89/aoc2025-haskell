@@ -1,0 +1,122 @@
+name:                aoc2024
+version:             0.3.0.0
+github:              "mgreen89/aoc2024-haskell"
+license:             BSD3
+author:              "Matthew Green"
+maintainer:          "mgreen89@gmail.com"
+copyright:           "2024 Matthew Green"
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/mgreen89/aoc2020-haskell#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- advent-of-code-api >= 0.2.9
+- aeson
+- ansi-terminal
+- array
+- bytestring
+- bytestring-trie
+- containers
+- criterion
+- data-default-class
+- deepseq
+- directory
+- fgl
+- filepath
+- lens
+- linear
+- megaparsec >= 8.0
+- MemoTrie
+- monad-loops
+- mtl
+- nonempty-containers
+- pandoc
+- parser-combinators
+- primitive
+- psqueues
+- recursion-schemes
+- safe
+- semigroupoids
+- split
+- text
+- time
+- transformers
+- unordered-containers
+- vector
+- yaml
+
+library:
+  source-dirs: src
+
+default-extensions:
+  - AllowAmbiguousTypes
+  - ApplicativeDo
+  - BangPatterns
+  - DataKinds
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveFoldable
+  - DeriveGeneric
+  - DeriveTraversable
+  - DuplicateRecordFields
+  - FlexibleContexts
+  - GADTs
+  - KindSignatures
+  - LambdaCase
+  - OverloadedRecordDot
+  - PatternGuards
+  - RecordWildCards
+  - TemplateHaskell
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - ViewPatterns
+
+ghc-options:
+  - -Wall
+
+executables:
+  aoc2024-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -Wall
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - aoc2024
+    - optparse-applicative
+
+tests:
+  aoc2024-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - aoc2024
+
+benchmarks:
+  aoc2024-bench:
+    main:                Bench.hs
+    source-dirs:         bench
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    dependencies:
+    - aoc2024
