@@ -5,10 +5,9 @@
 
 module AoC.Challenge.Day02 (
   day02a,
+  day02b,
 )
 where
-
--- , day02b
 
 import AoC.Solution
 import Data.Bifunctor (first)
@@ -32,20 +31,22 @@ parse :: String -> Either String [(Int, Int)]
 parse =
   first MP.errorBundlePretty . MP.parse parser "day02"
 
-solveA :: [(Int, Int)] -> Int
-solveA inp =
-  sum . IS.toAscList . IS.intersection toCheck $ ns
+rep :: Int -> Int -> Int
+rep n = read . concat . replicate n . show
+
+solve :: Bool -> [(Int, Int)] -> Int
+solve b inp = sum . IS.toAscList . IS.intersection toCheck $ ns
  where
   toCheck = unions $ (\(lo, hi) -> IS.fromList [lo .. hi]) <$> inp
   maxCheck = findMax toCheck
-  ns =
-    IS.fromAscList
-      . takeWhile (< maxCheck)
-      . fmap (read . concat . replicate 2 . show)
-      $ [1 ..]
+  maxCheckLen = length . show $ maxCheck
+  getNs n = IS.fromAscList . takeWhile (< maxCheck) . fmap (rep n) $ [1 ..]
+  ns
+    | b = IS.unions . fmap getNs $ [2 .. maxCheckLen]
+    | otherwise = getNs 2
 
 day02a :: Solution [(Int, Int)] Int
-day02a = Solution{sParse = parse, sShow = show, sSolve = Right . solveA}
+day02a = Solution{sParse = parse, sShow = show, sSolve = Right . solve False}
 
-day02b :: Solution _ _
-day02b = Solution{sParse = Right, sShow = show, sSolve = Right}
+day02b :: Solution [(Int, Int)] Int
+day02b = Solution{sParse = parse, sShow = show, sSolve = Right . solve True}
