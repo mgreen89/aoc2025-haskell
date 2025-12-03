@@ -1,15 +1,8 @@
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-
 module AoC.Challenge.Day01 (
   day01a,
   day01b,
 )
 where
-
--- , day01b
 
 import AoC.Solution
 import Control.Applicative ((<|>))
