@@ -23,20 +23,14 @@ day03a =
       , y <- ys
       ]
 
-pick :: (Int, [Int]) -> [(Int, [Int])]
-pick (tot, xs) =
+pick :: [(Int, [Int])] -> [(Int, [Int])]
+pick ps =
   [ (tot * 10 + x, ys)
-  | -- Prefer high digits!
+  | (tot, xs) <- ps
+  , -- Prefer high digits!
   n <- [9, 8 .. 1]
   , x : ys <- tails xs
   , x == n
-  ]
-
-picks :: [(Int, [Int])] -> [(Int, [Int])]
-picks xs =
-  [ x'
-  | x <- xs
-  , x' <- pick x
   ]
 
 solveB :: [[Int]] -> Int
@@ -45,7 +39,7 @@ solveB =
  where
   go :: [Int] -> Int
   go xs =
-    fst . (!! 0) . (!! 12) . iterate picks $ [(0, xs)]
+    fst . (!! 0) . (!! 12) . iterate pick $ [(0, xs)]
 
 day03b :: Solution [[Int]] Int
 day03b =
