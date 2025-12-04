@@ -8,21 +8,6 @@ import AoC.Solution
 import Data.Char (digitToInt)
 import Data.List (tails)
 
-day03a :: Solution [[Int]] Int
-day03a =
-  Solution
-    { sParse = Right . fmap (fmap digitToInt) . lines
-    , sShow = show
-    , sSolve = Right . sum . fmap go
-    }
- where
-  go xs =
-    maximum
-      [ x * 10 + y
-      | x : ys <- tails xs
-      , y <- ys
-      ]
-
 pick :: [(Int, [Int])] -> [(Int, [Int])]
 pick ps =
   [ (tot * 10 + x, ys)
@@ -33,18 +18,20 @@ pick ps =
   , x == n
   ]
 
-solveB :: [[Int]] -> Int
-solveB =
-  sum . fmap go
- where
-  go :: [Int] -> Int
-  go xs =
-    fst . (!! 0) . (!! 12) . iterate pick $ [(0, xs)]
-
-day03b :: Solution [[Int]] Int
-day03b =
+day03 :: Int -> Solution [[Int]] Int
+day03 n =
   Solution
     { sParse = Right . fmap (fmap digitToInt) . lines
     , sShow = show
-    , sSolve = Right . solveB
+    , sSolve = Right . sum . fmap go
     }
+    where
+      go :: [Int] -> Int
+      go =
+        fst . (!! 0) . (!! n) . iterate pick . (: []) . (0, )
+
+day03a :: Solution [[Int]] Int
+day03a = day03 2
+
+day03b :: Solution [[Int]] Int
+day03b = day03 12
