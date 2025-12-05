@@ -25,10 +25,10 @@ day03 n =
     , sShow = show
     , sSolve = Right . sum . fmap go
     }
-    where
-      go :: [Int] -> Int
-      go =
-        fst . (!! 0) . (!! n) . iterate pick . (: []) . (0, )
+ where
+  go :: [Int] -> Int
+  go =
+    fst . (!! 0) . (!! n) . iterate pick . (: []) . (0,)
 
 day03a :: Solution [[Int]] Int
 day03a = day03 2
