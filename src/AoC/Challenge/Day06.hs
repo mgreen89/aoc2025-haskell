@@ -6,7 +6,7 @@ where
 
 import AoC.Solution
 import AoC.Util (maybeToEither)
-import Data.List (transpose, uncons)
+import Data.List (transpose, unsnoc)
 import Data.List.Split (splitWhen)
 import Text.Read (readEither)
 
@@ -14,10 +14,6 @@ getOp :: (Foldable f, Num a) => Char -> Either String (f a -> a)
 getOp '+' = Right sum
 getOp '*' = Right product
 getOp x = Left ("Invalid operation: " ++ show x)
-
--- Not available in this version of base
-unsnoc :: [a] -> Maybe ([a], a)
-unsnoc xs = (\(hd, tl) -> (reverse tl, hd)) <$> uncons (reverse xs)
 
 day06a :: Solution [[String]] Int
 day06a =
