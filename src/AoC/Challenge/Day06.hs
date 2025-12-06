@@ -5,43 +5,51 @@ module AoC.Challenge.Day06 (
 where
 
 import AoC.Solution
-import Data.List (transpose)
+import AoC.Util (maybeToEither)
+import Data.List (transpose, uncons)
 import Data.List.Split (splitWhen)
+import Text.Read (readEither)
+
+getOp :: (Foldable f, Num a) => Char -> Either String (f a -> a)
+getOp '+' = Right sum
+getOp '*' = Right product
+getOp x = Left ("Invalid operation: " ++ show x)
+
+-- Not available in this version of base
+unsnoc :: [a] -> Maybe ([a], a)
+unsnoc xs = (\(hd, tl) -> (reverse tl, hd)) <$> uncons (reverse xs)
 
 day06a :: Solution [[String]] Int
 day06a =
   Solution
     { sParse = Right . fmap words . lines
     , sShow = show
-    , sSolve = Right . sum . fmap (go . reverse) . transpose
+    , sSolve = fmap sum . traverse (go . reverse) . transpose
     }
  where
-  go :: [String] -> Int
-  go ("+" : xs) = sum (fmap read xs)
-  go ("*" : xs) = product (fmap read xs)
-  go x = error ("invalid operation: " ++ show x)
+  go :: [String] -> Either String Int
+  go ([c] : xs) = getOp c <*> traverse readEither xs
+  go _ = Left "Invalid strucutre"
 
 day06b :: Solution [String] Int
 day06b =
   Solution
     { sParse = Right . lines
     , sShow = show
-    , sSolve = Right . sum . fmap solveProb . splitProbs
+    , sSolve = fmap sum . traverse solveProb . splitProbs
     }
  where
   splitProbs :: [String] -> [[String]]
   splitProbs = splitWhen (all (== ' ')) . transpose
 
-  getOp :: Char -> ([Int] -> Int)
-  getOp '+' = sum
-  getOp '*' = product
-  getOp x = error ("invalid operation: " ++ show x)
-
-  solveProb :: [String] -> Int
-  solveProb xs =
-    -- Each String is either a set of numbers (with preceeding and/or
-    -- following spaces), or a set of numbers with a following
-    -- operation. The operation always comes on the first number.
-    op (fmap (read . init) xs)
-   where
-    op = getOp . last . head $ xs
+  -- Each String is either a set of numbers (with preceeding and/or
+  -- following spaces), or a set of numbers with a following
+  -- operation. The operation always comes on the first number.
+  solveProb :: [String] -> Either String Int
+  solveProb [] = Left "No problem to solve"
+  solveProb (x : xs) = do
+    (fstN, opC) <- maybeToEither "Empty problem columnn" (unsnoc x)
+    op <- getOp opC
+    fstNum <- readEither fstN
+    rest <- traverse readEither xs
+    return $ op (fstNum : rest)
