@@ -31,7 +31,10 @@ solveA inp = case lines inp of
   go2 ((xs', c), line) x =
     case mht of
       Nothing -> ((xs', c), [])
-      Just ((_, p), t) -> if p == '^' then ((splitBoth, c + 1), t) else ((IS.insert x xs', c), t)
+      Just ((_, p), t) ->
+        if p == '^'
+          then ((splitBoth, c + 1), t)
+          else ((IS.insert x xs', c), t)
    where
     mht = uncons $ dropWhile ((/= x) . fst) line
     splitUp = IS.insert (x + 1) xs'
@@ -51,12 +54,19 @@ solveB inp = case lines inp of
   go (xs, count) line =
     fst $ IM.foldlWithKey' go2 ((IM.empty, count), zip [0 ..] line) xs
 
-  go2 :: ((IntMap Int, Int), [(Int, Char)]) -> Int -> Int -> ((IntMap Int, Int), [(Int, Char)])
+  go2 ::
+    ((IntMap Int, Int), [(Int, Char)]) ->
+    Int ->
+    Int ->
+    ((IntMap Int, Int), [(Int, Char)])
   go2 ((xs', c), []) _ _ = ((xs', c), [])
   go2 ((xs', c), line) x rs =
     case mht of
       Nothing -> ((xs', c), [])
-      Just ((_, p), t) -> if p == '^' then ((splitBoth, c + 1), t) else ((IM.insertWith (+) x rs xs', c), t)
+      Just ((_, p), t) ->
+        if p == '^'
+          then ((splitBoth, c + 1), t)
+          else ((IM.insertWith (+) x rs xs', c), t)
    where
     mht = uncons $ dropWhile ((/= x) . fst) line
     splitUp = IM.insertWith (+) (x + 1) rs xs'
