@@ -7,7 +7,6 @@ where
 import AoC.Solution
 import Control.Applicative ((<|>))
 import Data.Bifunctor (first)
-import Data.Foldable (foldl')
 import Data.List (scanl')
 import Data.Void (Void)
 import qualified Text.Megaparsec as MP

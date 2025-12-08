@@ -5,7 +5,6 @@ module AoC.Challenge.Day07 (
 where
 
 import AoC.Solution
-import Data.Foldable (foldl')
 import qualified Data.IntMap as IM
 import Data.IntMap.Strict (IntMap)
 import Data.IntSet (IntSet)
