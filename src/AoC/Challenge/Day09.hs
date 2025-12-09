@@ -17,23 +17,24 @@ import qualified Text.Megaparsec.Char as MP
 import qualified Text.Megaparsec.Char.Lexer as MPL
 
 parser :: MP.Parsec Void String [V2 Int]
-parser = flip MP.sepBy (MP.char '\n') $ do
-  x <- MPL.decimal <* MP.char ','
-  y <- MPL.decimal
-  pure $ V2 x y
+parser =
+  (V2 <$> MPL.decimal <*> (MP.char ',' *> MPL.decimal))
+    `MP.sepBy` MP.char '\n'
 
 parse :: String -> Either String [V2 Int]
 parse =
   first MP.errorBundlePretty . MP.parse parser "day08"
 
-sqA :: V2 Int -> V2 Int -> Int
-sqA (V2 x1 y1) (V2 x2 y2) = (abs (x2 - x1) + 1) * (abs (y2 - y1) + 1)
+area :: (V2 Int, V2 Int) -> Int
+area (V2 x1 y1, V2 x2 y2) = (abs (x2 - x1) + 1) * (abs (y2 - y1) + 1)
 
 allPairs :: [a] -> [(a, a)]
 allPairs xs = [(a, b) | a : as <- tails xs, b <- as]
 
 consecPairs :: [a] -> [(a, a)]
-consecPairs xs = zip xs (tail xs) ++ [(last xs, head xs)]
+consecPairs [] = []
+consecPairs [_] = []
+consecPairs (x : xs) = zip (x : xs) xs ++ [(last xs, x)]
 
 day09a :: Solution [V2 Int] Int
 day09a =
@@ -44,7 +45,7 @@ day09a =
         maybeToEither "no areas"
           . headMay
           . sortOn Down
-          . fmap (uncurry sqA)
+          . fmap area
           . allPairs
     }
 
@@ -69,7 +70,7 @@ solveB pts =
     . headMay
     . filter (noneIntersecting . fst)
     . sortOn (Down . snd)
-    . fmap (\p -> (p, uncurry sqA p))
+    . fmap (\p -> (p, area p))
     . allPairs
     $ pts
  where
@@ -81,9 +82,4 @@ solveB pts =
     not . any (boxIntersect box) $ edges
 
 day09b :: Solution [V2 Int] Int
-day09b =
-  Solution
-    { sParse = parse
-    , sShow = show
-    , sSolve = solveB
-    }
+day09b = Solution{sParse = parse, sShow = show, sSolve = solveB}
