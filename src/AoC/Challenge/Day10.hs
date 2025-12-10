@@ -1,19 +1,13 @@
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-
 module AoC.Challenge.Day10 (
   day10a,
+  day10b,
 )
 where
 
--- , day10b
-
 import AoC.Solution
 import Data.Bifunctor (first)
-import Data.Bits (shiftL, xor, (.|.))
-import Data.Foldable (find, foldl')
+import Data.Bits (bit, shiftL, testBit, xor, (.|.))
+import Data.Foldable (find)
 import Data.List (tails)
 import Data.Void (Void)
 import qualified Text.Megaparsec as MP
@@ -25,7 +19,7 @@ import qualified Text.Megaparsec.Char.Lexer as MPL
 --
 -- Both the lights and buttons are stored as bitfields, where the left-most
 -- light is the lowest bit.
-parser :: MP.Parsec Void String [(Int, [Int])]
+parser :: MP.Parsec Void String [(Int, [Int], [Int])]
 parser = flip MP.sepBy (MP.char '\n') $ do
   MP.char '['
   lc <- MP.takeWhile1P Nothing (\c -> c == '.' || c == '#')
@@ -38,36 +32,68 @@ parser = flip MP.sepBy (MP.char '\n') $ do
     MP.char ' '
     pure ns
   MP.char '{'
-  _ <- MP.sepBy MPL.decimal (MP.char ',')
+  joltages <- MP.sepBy MPL.decimal (MP.char ',')
   MP.char '}'
-  pure $ (mkBin lc, fmap toBits buttons)
+  pure $ (mkBin lc, fmap toBits buttons, joltages)
  where
   mkBin :: String -> Int
   mkBin = foldr (\c acc -> (acc `shiftL` 1) .|. if c == '#' then 1 else 0) 0
 
   toBits :: [Int] -> Int
-  toBits = foldl' (\acc b -> acc .|. (1 `shiftL` b)) 0
+  toBits = foldl' (\acc b -> acc .|. (bit b)) 0
 
-parse :: String -> Either String [(Int, [Int])]
+parse :: String -> Either String [(Int, [Int], [Int])]
 parse =
   first MP.errorBundlePretty . MP.parse parser "day10"
 
-minPushes :: (Int, [Int]) -> Int
-minPushes (tgt, buttons) = go [(0, [], buttons)]
+minLightPushes :: (Int, [Int], [Int]) -> Int
+minLightPushes (tgt, buttons, _) = go [(0, [], buttons)]
  where
   go :: [(Int, [Int], [Int])] -> Int
   go [] = error "no solution!"
   go st =
-    let nexts = [(l `xor` b, b : ps, rest) | (l, ps, bs) <- st, (b : rest) <- tails bs]
+    let nexts =
+          [ (l `xor` b, b : ps, rest)
+          | (l, ps, bs) <- st
+          , (b : rest) <- tails bs
+          ]
      in case find ((== tgt) . (\(l, _, _) -> l)) nexts of
           Just (_, ps, _) -> length ps
           Nothing -> go nexts
 
-solveA :: [(Int, [Int])] -> Int
-solveA = sum . fmap minPushes
+day10a :: Solution [(Int, [Int], [Int])] Int
+day10a =
+  Solution
+    { sParse = parse
+    , sShow = show
+    , sSolve = Right . sum . fmap minLightPushes
+    }
 
-day10a :: Solution [(Int, [Int])] Int
-day10a = Solution{sParse = parse, sShow = show, sSolve = Right . solveA}
+minJoltagePushes :: (Int, [Int], [Int]) -> Int
+minJoltagePushes (_, buttons, joltages) =
+  go [(replicate (length joltages) 0, [], buttons)]
+ where
+  go :: [([Int], [Int], [Int])] -> Int
+  go st =
+    let nexts =
+          [ (js', b : ps, (b : cands))
+          | (js, ps, bs) <- st
+          , (b : cands) <- tails bs
+          , let js' = update js b
+          , all (\(j, t) -> j <= t) $ zip js' joltages
+          ]
+     in case find ((== joltages) . (\(js, _, _) -> js)) nexts of
+          Just (_, ps, _) -> length ps
+          Nothing -> go nexts
 
-day10b :: Solution _ _
-day10b = Solution{sParse = Right, sShow = show, sSolve = Right}
+  update :: [Int] -> Int -> [Int]
+  update js b =
+    fmap (\(i, j) -> if b `testBit` i then j + 1 else j) . zip [0 ..] $ js
+
+day10b :: Solution [(Int, [Int], [Int])] Int
+day10b =
+  Solution
+    { sParse = parse
+    , sShow = show
+    , sSolve = Right . sum . fmap minJoltagePushes
+    }
