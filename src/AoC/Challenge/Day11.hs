@@ -1,46 +1,55 @@
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-
 module AoC.Challenge.Day11 (
-  day11a
+  day11a,
+  day11b,
 )
 where
 
-
--- , day11b
-
-
 import AoC.Solution
 import AoC.Util (maybeToEither)
-import Data.List (init, uncons)
+import Data.List (uncons)
 import Data.Map (Map)
 import qualified Data.Map as M
 
-import Debug.Trace
-
-
 -- Parse input like:
 -- hhh: ccc fff iii
-parse :: String -> Either String [(String, [String])]
+parse :: String -> Either String (Map String [String])
 parse =
-  maybeToEither "device with no output"
-  . traverse (fmap (\(x, xs) -> (init x, xs)) . uncons . words)
-  . lines
+  maybeToEither "invalid input"
+    . fmap M.fromList
+    . traverse (fmap (\(x, xs) -> (init x, xs)) . uncons . words)
+    . lines
 
-solveA :: [(String, [String])] -> Either String Int
-solveA devices = maybeToEither "no 'you' entry" $ M.lookup "you" pcm
-  where
-    pcm :: Map String Int
-    pcm = fmap (sum . fmap countPaths) $ M.fromList devices
+-- Get # of paths from start to end in the given DAG.
+paths :: Map String [String] -> String -> String -> Int
+paths dag start end =
+  M.findWithDefault 0 start m
+ where
+  m :: Map String Int
+  m = fmap (sum . fmap countPaths) dag
 
-    countPaths :: String -> Int
-    countPaths "out" = 1
-    countPaths s = pcm M.! s
+  countPaths :: String -> Int
+  countPaths s
+    | s == end = 1
+    | otherwise = M.findWithDefault 0 s m
 
-day11a :: Solution [(String, [String])] Int
-day11a = Solution{sParse = parse, sShow = show, sSolve = solveA}
+day11a :: Solution (Map String [String]) Int
+day11a =
+  Solution
+    { sParse = parse
+    , sShow = show
+    , sSolve = Right . (\dag -> paths dag "you" "out")
+    }
 
-day11b :: Solution _ _
-day11b = Solution{sParse = Right, sShow = show, sSolve = Right}
+solveB :: Map String [String] -> Int
+solveB devices =
+  ( paths devices "svr" "fft"
+      * paths devices "fft" "dac"
+      * paths devices "dac" "out"
+  )
+    + ( paths devices "svr" "dac"
+          * paths devices "dac" "fft"
+          * paths devices "fft" "out"
+      )
+
+day11b :: Solution (Map String [String]) Int
+day11b = Solution{sParse = parse, sShow = show, sSolve = Right . solveB}
