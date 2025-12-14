@@ -78,15 +78,13 @@ powerSet (x : xs) = [x : ps | ps <- powerSet xs] ++ powerSet xs
 
 minJoltagePushes :: (Int, [Int], [Int]) -> Int
 minJoltagePushes (_, buttons, joltages) =
-  case go (joltages, 1) of
-    n | n >= 1000000000 -> error $ show buttons ++ show joltages
-    n -> n
+  go (joltages, 1)
  where
-  -- Get all ways of making the lights turn on (pushing each button at most once).
+  -- Get all ways of making the lights turn on (pushing each button
+  -- at most once).
+  -- Memoize the results for performance.
   allLightPushes :: Int -> [[Int]]
-  allLightPushes t = case M.lookup t memo of
-    Just ps -> ps
-    Nothing -> error $ "no pushes for target " ++ show t ++ show (memo)
+  allLightPushes = (memo M.!)
    where
     getPushes :: Int -> [[Int]]
     getPushes t = filter ((== t) . (foldl' xor 0)) $ powerSet buttons
@@ -99,6 +97,7 @@ minJoltagePushes (_, buttons, joltages) =
 
   go :: ([Int], Int) -> Int
   go (js, mfac)
+    -- If all requested joltages are zero, we're done.
     | all (== 0) js = 0
     | otherwise =
         let
@@ -108,8 +107,9 @@ minJoltagePushes (_, buttons, joltages) =
           -- Generate the new joltages after applying all possible pushes.
           -- to get the lights.
           --
-          -- N.B. Let "no pushes" through so that multiple `div 2`s can
-          -- happen in case e.g. 4 2 4 0 4 is much easier than 2 1 2 0 2.
+          -- N.B. Let "no pushes" through so that multiple consecutive
+          -- `div 2`s can happen in case e.g. 4 2 4 0 4 is much easier
+          -- than 2 1 2 0 2.
           nexts =
             [ (ps, ns)
             | ps <- allLightPushes tgt
