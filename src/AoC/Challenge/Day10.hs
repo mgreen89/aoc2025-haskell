@@ -9,6 +9,8 @@ import Data.Bifunctor (first)
 import Data.Bits (bit, shiftL, testBit, xor, (.&.), (.|.))
 import Data.Foldable (find)
 import Data.List (tails)
+import Data.Map (Map)
+import qualified Data.Map as M
 import Data.Void (Void)
 import qualified Text.Megaparsec as MP
 import qualified Text.Megaparsec.Char as MP
@@ -74,17 +76,27 @@ powerSet :: [a] -> [[a]]
 powerSet [] = [[]]
 powerSet (x : xs) = [x : ps | ps <- powerSet xs] ++ powerSet xs
 
--- Get all ways of making the lights turn on (pushing each button at most once).
-allLightPushes :: (Int, [Int]) -> [[Int]]
-allLightPushes (tgt, buttons) =
-  filter (\ps -> foldl' xor 0 ps == tgt) $ powerSet buttons
-
 minJoltagePushes :: (Int, [Int], [Int]) -> Int
 minJoltagePushes (_, buttons, joltages) =
   case go (joltages, 1) of
     n | n >= 1000000000 -> error $ show buttons ++ show joltages
     n -> n
  where
+  -- Get all ways of making the lights turn on (pushing each button at most once).
+  allLightPushes :: Int -> [[Int]]
+  allLightPushes t = case M.lookup t memo of
+    Just ps -> ps
+    Nothing -> error $ "no pushes for target " ++ show t ++ show (memo)
+   where
+    getPushes :: Int -> [[Int]]
+    getPushes t = filter ((== t) . (foldl' xor 0)) $ powerSet buttons
+
+    memo :: Map Int [[Int]]
+    memo =
+      M.fromList
+        . fmap (\l -> (l, getPushes l))
+        $ [0 .. (2 ^ length joltages) - 1]
+
   go :: ([Int], Int) -> Int
   go (js, mfac)
     | all (== 0) js = 0
@@ -100,7 +112,7 @@ minJoltagePushes (_, buttons, joltages) =
           -- happen in case e.g. 4 2 4 0 4 is much easier than 2 1 2 0 2.
           nexts =
             [ (ps, ns)
-            | ps <- allLightPushes (tgt, buttons)
+            | ps <- allLightPushes tgt
             , let ns =
                     [ j - n
                     | (i, j) <- zip [0 ..] js
