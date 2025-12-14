@@ -6,7 +6,7 @@ where
 
 import AoC.Solution
 import Data.Bifunctor (first)
-import Data.Bits (bit, shiftL, testBit, xor, (.|.))
+import Data.Bits (bit, shiftL, testBit, xor, (.&.), (.|.))
 import Data.Foldable (find)
 import Data.List (tails)
 import Data.Void (Void)
@@ -46,10 +46,10 @@ parse :: String -> Either String [(Int, [Int], [Int])]
 parse =
   first MP.errorBundlePretty . MP.parse parser "day10"
 
-minLightPushes :: (Int, [Int], [Int]) -> Int
+minLightPushes :: (Int, [Int], [Int]) -> [Int]
 minLightPushes (tgt, buttons, _) = go [(0, [], buttons)]
  where
-  go :: [(Int, [Int], [Int])] -> Int
+  go :: [(Int, [Int], [Int])] -> [Int]
   go [] = error "no solution!"
   go st =
     let nexts =
@@ -58,7 +58,7 @@ minLightPushes (tgt, buttons, _) = go [(0, [], buttons)]
           , (b : rest) <- tails bs
           ]
      in case find ((== tgt) . (\(l, _, _) -> l)) nexts of
-          Just (_, ps, _) -> length ps
+          Just (_, ps, _) -> ps
           Nothing -> go nexts
 
 day10a :: Solution [(Int, [Int], [Int])] Int
@@ -66,29 +66,66 @@ day10a =
   Solution
     { sParse = parse
     , sShow = show
-    , sSolve = Right . sum . fmap minLightPushes
+    , sSolve = Right . sum . fmap (length . minLightPushes)
     }
+
+-- Power set without using Set.
+powerSet :: [a] -> [[a]]
+powerSet [] = [[]]
+powerSet (x : xs) = [x : ps | ps <- powerSet xs] ++ powerSet xs
+
+-- Get all ways of making the lights turn on (pushing each button at most once).
+allLightPushes :: (Int, [Int]) -> [[Int]]
+allLightPushes (tgt, buttons) =
+  filter (\ps -> foldl' xor 0 ps == tgt) $ powerSet buttons
 
 minJoltagePushes :: (Int, [Int], [Int]) -> Int
 minJoltagePushes (_, buttons, joltages) =
-  go [(replicate (length joltages) 0, [], buttons)]
+  case go (joltages, 1) of
+    n | n >= 1000000000 -> error $ show buttons ++ show joltages
+    n -> n
  where
-  go :: [([Int], [Int], [Int])] -> Int
-  go st =
-    let nexts =
-          [ (js', b : ps, (b : cands))
-          | (js, ps, bs) <- st
-          , (b : cands) <- tails bs
-          , let js' = update js b
-          , all (\(j, t) -> j <= t) $ zip js' joltages
-          ]
-     in case find ((== joltages) . (\(js, _, _) -> js)) nexts of
-          Just (_, ps, _) -> length ps
-          Nothing -> go nexts
+  go :: ([Int], Int) -> Int
+  go (js, mfac)
+    | all (== 0) js = 0
+    | otherwise =
+        let
+          -- Convert the joltages to lights.
+          tgt = foldr (\j acc -> (acc `shiftL` 1) .|. (j .&. 1)) 0 js
 
-  update :: [Int] -> Int -> [Int]
-  update js b =
-    fmap (\(i, j) -> if b `testBit` i then j + 1 else j) . zip [0 ..] $ js
+          -- Generate the new joltages after applying all possible pushes.
+          -- to get the lights.
+          --
+          -- N.B. Let "no pushes" through so that multiple `div 2`s can
+          -- happen in case e.g. 4 2 4 0 4 is much easier than 2 1 2 0 2.
+          nexts =
+            [ (ps, ns)
+            | ps <- allLightPushes (tgt, buttons)
+            , let ns =
+                    [ j - n
+                    | (i, j) <- zip [0 ..] js
+                    , let n = length $ filter (\p -> p `testBit` i) ps
+                    ]
+            , all (>= 0) ns
+            ]
+
+          -- Factor out 2 from the joltages where possible.
+          red :: ([Int], Int) -> ([Int], Int)
+          red (xs, m)
+            | all even xs = (fmap (`div` 2) xs, m * 2)
+            | otherwise = (xs, m)
+
+          -- Reduce the joltages as much as possible.
+          nxm =
+            [ mfac * length ps + go (ns', fac')
+            | (ps, ns) <- nexts
+            , let (ns', fac') = red (ns, mfac)
+            ]
+         in
+          case nxm of
+            -- Large enough number this path is never taken.
+            [] -> 1000000000
+            cs -> minimum cs
 
 day10b :: Solution [(Int, [Int], [Int])] Int
 day10b =
