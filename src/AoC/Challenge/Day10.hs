@@ -5,12 +5,13 @@ module AoC.Challenge.Day10 (
 where
 
 import AoC.Solution
+import AoC.Util (maybeToEither)
 import Data.Bifunctor (first)
 import Data.Bits (bit, shiftL, testBit, xor, (.&.), (.|.))
 import Data.Foldable (find)
 import Data.List (tails)
-import Data.Map (Map)
-import qualified Data.Map as M
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Void (Void)
 import qualified Text.Megaparsec as MP
 import qualified Text.Megaparsec.Char as MP
@@ -71,78 +72,85 @@ day10a =
     , sSolve = Right . sum . fmap (length . minLightPushes)
     }
 
--- Power set without using Set.
+minJust :: [Maybe Int] -> Maybe Int
+minJust = foldl' go Nothing
+ where
+  go :: Maybe Int -> Maybe Int -> Maybe Int
+  go Nothing y = y
+  go x Nothing = x
+  go (Just x) (Just y) = Just $ min x y
+
+-- Power set without using Data.Set.
 powerSet :: [a] -> [[a]]
 powerSet [] = [[]]
 powerSet (x : xs) = [x : ps | ps <- powerSet xs] ++ powerSet xs
 
-minJoltagePushes :: (Int, [Int], [Int]) -> Int
+minJoltagePushes :: (Int, [Int], [Int]) -> Either String Int
 minJoltagePushes (_, buttons, joltages) =
-  go (joltages, 1)
+  maybeToEither ("No solution for " ++ show joltages) $ go joltages
  where
-  -- Get all ways of making the lights turn on (pushing each button
-  -- at most once).
-  -- Memoize the results for performance.
+  -- Given the set of buttons, precompute what the lights would show for
+  -- each possible set of 0 or 1 pushes, and provide a function to access
+  -- the button pushes for a given light configuration.
   allLightPushes :: Int -> [[Int]]
-  allLightPushes = (memo M.!)
+  allLightPushes ls = M.findWithDefault [] ls m
    where
-    getPushes :: Int -> [[Int]]
-    getPushes t = filter ((== t) . (foldl' xor 0)) $ powerSet buttons
+    m :: Map Int [[Int]]
+    m =
+      M.fromListWith (++)
+      . fmap (\xs -> (foldl' xor 0 xs, [xs]))
+      $ powerSet buttons
 
-    memo :: Map Int [[Int]]
-    memo =
-      M.fromList
-        . fmap (\l -> (l, getPushes l))
-        $ [0 .. (2 ^ length joltages) - 1]
-
-  go :: ([Int], Int) -> Int
-  go (js, mfac)
+  -- Get the minimum number of button pushes to achieve the requested joltages.
+  -- If no solution is possible, return Nothing.
+  go :: [Int] -> Maybe Int
+  go js
     -- If all requested joltages are zero, we're done.
-    | all (== 0) js = 0
+    | all (== 0) js = Just 0
     | otherwise =
         let
-          -- Convert the joltages to lights.
-          tgt = foldr (\j acc -> (acc `shiftL` 1) .|. (j .&. 1)) 0 js
+          -- Convert a list of joltages to a light configuration
+          -- (based on the parity of the joltages).
+          joltagesToLights :: [Int] -> Int
+          joltagesToLights = foldr (\j acc -> (acc `shiftL` 1) .|. (j .&. 1)) 0
 
-          -- Generate the new joltages after applying all possible pushes.
-          -- to get the lights.
+
+          -- Generate the next set of candidate joltages.
+          -- For each possible set of pushes that result in the target
+          -- lights, generate the new required joltages after applying
+          -- those pushes.
+          --
+          -- Only keep valid targets (i.e. no negative joltages).
           --
           -- N.B. Let "no pushes" through so that multiple consecutive
           -- `div 2`s can happen in case e.g. 4 2 4 0 4 is much easier
           -- than 2 1 2 0 2.
-          nexts =
-            [ (ps, ns)
-            | ps <- allLightPushes tgt
-            , let ns =
+          cands =
+            [ (ps, js')
+            | ps <- allLightPushes (joltagesToLights js)
+            , let js' =
                     [ j - n
                     | (i, j) <- zip [0 ..] js
-                    , let n = length $ filter (\p -> p `testBit` i) ps
+                    , let n = length $ filter (`testBit` i) ps
                     ]
-            , all (>= 0) ns
-            ]
-
-          -- Factor out 2 from the joltages where possible.
-          red :: ([Int], Int) -> ([Int], Int)
-          red (xs, m)
-            | all even xs = (fmap (`div` 2) xs, m * 2)
-            | otherwise = (xs, m)
-
-          -- Reduce the joltages as much as possible.
-          nxm =
-            [ mfac * length ps + go (ns', fac')
-            | (ps, ns) <- nexts
-            , let (ns', fac') = red (ns, mfac)
+            , all (>= 0) js'
             ]
          in
-          case nxm of
-            -- Large enough number this path is never taken.
-            [] -> 1000000000
-            cs -> minimum cs
+          -- For each possibility, reduce the joltages by half if possible
+          -- and recurse, and find the minimum valid cost.
+          minJust
+            [ (length ps +) . (fac' *) <$> go ns'
+            | (ps, js') <- cands
+            , let (ns', fac') =
+                    if all even js'
+                      then (fmap (`div` 2) js', 2)
+                      else (js', 1)
+            ]
 
 day10b :: Solution [(Int, [Int], [Int])] Int
 day10b =
   Solution
     { sParse = parse
     , sShow = show
-    , sSolve = Right . sum . fmap minJoltagePushes
+    , sSolve = fmap sum . traverse minJoltagePushes
     }
